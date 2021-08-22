@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{DA93CB73-4060-692E-E272-8C8E66E27BBE}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "GoGoPowerKarts",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "PhysXVehicles",
+			"Enabled": true
+		},
+		{
+			"Name": "RawInput",
+			"Enabled": true
+		}
+	]
+}
