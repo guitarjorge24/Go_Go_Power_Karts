@@ -37,6 +37,7 @@ private:
 	float MaxDrivingForce = 10000.f; // 10,000N is the force required to cause a 1000kg car to accelerate at 10m/s^2 
 	float Throttle;
 	
-
 	void MoveForward(float AxisValue);
+	/* Calculates translation based on velocity. Resets velocity to zero if we collide with something */
+	void UpdateLocationFromVelocity(float DeltaTime);
 };

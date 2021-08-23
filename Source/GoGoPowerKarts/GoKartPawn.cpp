@@ -17,6 +17,17 @@ void AGoKartPawn::BeginPlay()
 	Super::BeginPlay();
 }
 
+void AGoKartPawn::UpdateLocationFromVelocity(float DeltaTime)
+{
+	FVector Translation =  Velocity * 100 * DeltaTime; // multiply by 100 to convert cm to meters
+	FHitResult SweepHitResult;
+	AddActorWorldOffset(Translation, true, &SweepHitResult);
+	if (SweepHitResult.IsValidBlockingHit())
+	{
+		Velocity = FVector::ZeroVector;
+	}
+}
+
 // Called every frame
 void AGoKartPawn::Tick(float DeltaTime)
 {
@@ -27,8 +38,7 @@ void AGoKartPawn::Tick(float DeltaTime)
 
 	Velocity += Acceleration * DeltaTime; // add the effect of acceleration on this frame
 
-	FVector Translation =  Velocity * 100 * DeltaTime; // multiply by 100 to convert cm to meters
-	AddActorWorldOffset(Translation);
+	UpdateLocationFromVelocity(DeltaTime);
 }
 
 // Called to bind functionality to input
