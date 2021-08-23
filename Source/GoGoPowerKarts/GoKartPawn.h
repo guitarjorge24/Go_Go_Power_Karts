@@ -29,5 +29,14 @@ public:
 private:
 	FVector Velocity;
 
+	/* Mass of the car in kg */
+	UPROPERTY(EditAnywhere)
+	float Mass = 1000.f;
+	/* The force applied to the car when the throttle is fully down (in Newtons) */
+	UPROPERTY(EditAnywhere)
+	float MaxDrivingForce = 10000.f; // 10,000N is the force required to cause a 1000kg car to accelerate at 10m/s^2 
+	float Throttle;
+	
+
 	void MoveForward(float AxisValue);
 };

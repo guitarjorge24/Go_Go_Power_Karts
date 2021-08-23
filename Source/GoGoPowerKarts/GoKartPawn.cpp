@@ -22,7 +22,12 @@ void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FVector Translation =  Velocity * 100 * DeltaTime; // convert cm to meters
+	FVector Force = GetActorForwardVector() * MaxDrivingForce * Throttle;
+	FVector Acceleration = Force / Mass;
+
+	Velocity += Acceleration * DeltaTime; // add the effect of acceleration on this frame
+
+	FVector Translation =  Velocity * 100 * DeltaTime; // multiply by 100 to convert cm to meters
 	AddActorWorldOffset(Translation);
 }
 
@@ -35,5 +40,5 @@ void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 
 void AGoKartPawn::MoveForward(float AxisValue)
 {
-	Velocity = GetActorForwardVector() * (20.f * AxisValue);
+	Throttle = AxisValue;
 }
