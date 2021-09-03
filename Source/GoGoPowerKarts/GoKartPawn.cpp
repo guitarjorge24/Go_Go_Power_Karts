@@ -17,17 +17,6 @@ void AGoKartPawn::BeginPlay()
 	Super::BeginPlay();
 }
 
-void AGoKartPawn::UpdateLocationFromVelocity(float DeltaTime)
-{
-	FVector Translation =  Velocity * 100 * DeltaTime; // multiply by 100 to convert cm to meters
-	FHitResult SweepHitResult;
-	AddActorWorldOffset(Translation, true, &SweepHitResult);
-	if (SweepHitResult.IsValidBlockingHit())
-	{
-		Velocity = FVector::ZeroVector;
-	}
-}
-
 // Called every frame
 void AGoKartPawn::Tick(float DeltaTime)
 {
@@ -38,6 +27,8 @@ void AGoKartPawn::Tick(float DeltaTime)
 
 	Velocity += Acceleration * DeltaTime; // add the effect of acceleration on this frame
 
+	ApplyRotation(DeltaTime);
+
 	UpdateLocationFromVelocity(DeltaTime);
 }
 
@@ -46,9 +37,41 @@ void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAxis("MoveForward", this, &AGoKartPawn::MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &AGoKartPawn::MoveRight);
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
 {
 	Throttle = AxisValue;
 }
+
+void AGoKartPawn::MoveRight(float AxisValue)
+{
+	SteeringThrow = AxisValue;
+}
+
+void AGoKartPawn::ApplyRotation(float DeltaTime)
+{
+	float RotationAngleDegrees = MadDegreesPerSecond * DeltaTime * SteeringThrow;
+	float RotationAngleRadians = FMath::DegreesToRadians(RotationAngleDegrees);
+	FQuat RotationDelta(GetActorUpVector(), RotationAngleRadians);
+
+	// Rotate velocity vector by Quat's angle. Otherwise, only the mesh rotates but we keep moving in the same direction.
+	Velocity = RotationDelta.RotateVector(Velocity); 
+
+	AddActorWorldRotation(RotationDelta); // Rotate the car mesh itself.
+}
+
+void AGoKartPawn::UpdateLocationFromVelocity(float DeltaTime)
+{
+	FVector Translation =  Velocity * 100 * DeltaTime; // multiply by 100 to convert cm to meters
+	FHitResult SweepHitResult;
+	AddActorWorldOffset(Translation, true, &SweepHitResult);
+	// Reset velocity back to 0 if we hit something.
+	if (SweepHitResult.IsValidBlockingHit())
+	{
+		Velocity = FVector::ZeroVector;
+	}
+}
+
+

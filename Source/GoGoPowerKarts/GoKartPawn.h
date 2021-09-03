@@ -35,9 +35,16 @@ private:
 	/* The force applied to the car when the throttle is fully down (in Newtons) */
 	UPROPERTY(EditAnywhere)
 	float MaxDrivingForce = 10000.f; // 10,000N is the force required to cause a 1000kg car to accelerate at 10m/s^2 
+	/* How many degrees the car can turn per second at max input axis */
+	float MadDegreesPerSecond = 90.f;  
+
 	float Throttle;
-	
+	float SteeringThrow;
+
 	void MoveForward(float AxisValue);
+	void MoveRight(float AxisValue);
+	
+	void ApplyRotation(float DeltaTime);
 	/* Calculates translation based on velocity. Resets velocity to zero if we collide with something */
 	void UpdateLocationFromVelocity(float DeltaTime);
 };
