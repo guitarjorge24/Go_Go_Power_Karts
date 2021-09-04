@@ -22,14 +22,16 @@ void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FVector Force = GetActorForwardVector() * MaxDrivingForce * Throttle;
-	FVector Acceleration = Force / Mass;
+	FVector ForwardForce = GetActorForwardVector() * MaxDrivingForce * Throttle;
+	FVector NetForce = ForwardForce + GetAirResistance(); 
+	FVector Acceleration = NetForce / Mass;
 
 	Velocity += Acceleration * DeltaTime; // add the effect of acceleration on this frame
-
+	
 	ApplyRotation(DeltaTime);
-
 	UpdateLocationFromVelocity(DeltaTime);
+
+	UE_LOG(LogTemp, Warning, TEXT("Speed: %f"), Velocity.Size());
 }
 
 // Called to bind functionality to input
@@ -48,6 +50,13 @@ void AGoKartPawn::MoveForward(float AxisValue)
 void AGoKartPawn::MoveRight(float AxisValue)
 {
 	SteeringThrow = AxisValue;
+}
+
+FVector AGoKartPawn::GetAirResistance()
+{
+	// Air Resistance formula is Speed^2 * DragCoefficient. Direction is opposite to velocity.
+	// SizeSquared returns the speed of the velocity and then squares it.
+	return  -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient; 
 }
 
 void AGoKartPawn::ApplyRotation(float DeltaTime)
