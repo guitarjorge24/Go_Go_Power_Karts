@@ -41,6 +41,9 @@ private:
 	/* Higher number means more drag and thus more air resistance. Lower number means the car is more aerodynamic. */
 	UPROPERTY(EditAnywhere)
 	float DragCoefficient = 16.f; // 16 is the drag coefficient necessary to produce a drag of 10,000N when moving at 25m/s which is ~56mph
+	UPROPERTY(EditAnywhere)
+	/* Higher number means more rolling resistance which slows down the car to a stop more quickly. */
+	float RollingResistanceCoefficient = 0.02f;
 
 	float Throttle;
 	float SteeringThrow;
@@ -49,6 +52,7 @@ private:
 	void MoveRight(float AxisValue);
 
 	FVector GetAirResistance();
+	FVector GetRollingResistance();
 	void ApplyRotation(float DeltaTime);
 	/* Calculates translation based on velocity. Resets velocity to zero if we collide with something */
 	void UpdateLocationFromVelocity(float DeltaTime);

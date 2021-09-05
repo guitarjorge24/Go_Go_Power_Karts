@@ -2,7 +2,9 @@
 
 
 #include "GoKartPawn.h"
+
 #include "Components/InputComponent.h"
+#include "Engine/World.h"
 
 // Sets default values
 AGoKartPawn::AGoKartPawn()
@@ -23,9 +25,19 @@ void AGoKartPawn::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	FVector ForwardForce = GetActorForwardVector() * MaxDrivingForce * Throttle;
-	FVector NetForce = ForwardForce + GetAirResistance(); 
+	
+	FVector NetForce = ForwardForce + GetAirResistance();
+	if (!(Velocity.Size() < 0.015f))
+	{
+		NetForce += GetRollingResistance();
+	}
+	else if (Throttle < 0.1f)
+	{
+		Velocity = FVector::ZeroVector;
+	}
+	
 	FVector Acceleration = NetForce / Mass;
-
+	
 	Velocity += Acceleration * DeltaTime; // add the effect of acceleration on this frame
 	
 	ApplyRotation(DeltaTime);
@@ -54,9 +66,17 @@ void AGoKartPawn::MoveRight(float AxisValue)
 
 FVector AGoKartPawn::GetAirResistance()
 {
-	// Air Resistance formula is Speed^2 * DragCoefficient. Direction is opposite to velocity.
+	// Formula: Air Resistance = Speed^2 * DragCoefficient. Direction is opposite to velocity.
 	// SizeSquared returns the speed of the velocity and then squares it.
 	return  -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient; 
+}
+
+FVector AGoKartPawn::GetRollingResistance()
+{
+	float GravityAcceleration = -GetWorld()->GetGravityZ() / 100.f; // divide by 100 to convert cm/s to m/s
+	float NormalForce = Mass * GravityAcceleration;
+	FVector RollingResistance = -Velocity.GetSafeNormal() * RollingResistanceCoefficient * NormalForce;
+	return RollingResistance;
 }
 
 void AGoKartPawn::ApplyRotation(float DeltaTime)
