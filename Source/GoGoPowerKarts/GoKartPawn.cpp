@@ -81,8 +81,8 @@ FVector AGoKartPawn::GetRollingResistance()
 
 void AGoKartPawn::ApplyRotation(float DeltaTime)
 {
-	float RotationAngleDegrees = MadDegreesPerSecond * DeltaTime * SteeringThrow;
-	float RotationAngleRadians = FMath::DegreesToRadians(RotationAngleDegrees);
+	float DistanceTraveledAlongTurningCircle = FVector::DotProduct(GetActorForwardVector(), Velocity) * DeltaTime;
+	float RotationAngleRadians = (DistanceTraveledAlongTurningCircle / MinTurningRadius) * SteeringThrow;
 	FQuat RotationDelta(GetActorUpVector(), RotationAngleRadians);
 
 	// Rotate velocity vector by Quat's angle. Otherwise, only the mesh rotates but we keep moving in the same direction.
