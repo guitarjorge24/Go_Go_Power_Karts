@@ -48,8 +48,10 @@ private:
 	float Throttle;
 	float SteeringThrow;
 
-	void MoveForward(float AxisValue);
-	void MoveRight(float AxisValue);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_MoveForward(float AxisValue);
+	UFUNCTION(Server, Reliable, WithValidation)
+	void Server_MoveRight(float AxisValue);
 
 	FVector GetAirResistance();
 	FVector GetRollingResistance();

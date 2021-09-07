@@ -50,16 +50,26 @@ void AGoKartPawn::Tick(float DeltaTime)
 void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	PlayerInputComponent->BindAxis("MoveForward", this, &AGoKartPawn::MoveForward);
-	PlayerInputComponent->BindAxis("MoveRight", this, &AGoKartPawn::MoveRight);
+	PlayerInputComponent->BindAxis("MoveForward", this, &AGoKartPawn::Server_MoveForward);
+	PlayerInputComponent->BindAxis("MoveRight", this, &AGoKartPawn::Server_MoveRight);
 }
 
-void AGoKartPawn::MoveForward(float AxisValue)
+bool AGoKartPawn::Server_MoveForward_Validate(float AxisValue)
+{
+	return FMath::Abs(AxisValue) <= 1.f;
+}
+
+void AGoKartPawn::Server_MoveForward_Implementation(float AxisValue)
 {
 	Throttle = AxisValue;
 }
 
-void AGoKartPawn::MoveRight(float AxisValue)
+bool AGoKartPawn::Server_MoveRight_Validate(float AxisValue)
+{
+	return FMath::Abs(AxisValue) <= 1.f;
+}
+
+void AGoKartPawn::Server_MoveRight_Implementation(float AxisValue)
 {
 	SteeringThrow = AxisValue;
 }
@@ -81,6 +91,7 @@ FVector AGoKartPawn::GetRollingResistance()
 
 void AGoKartPawn::ApplyRotation(float DeltaTime)
 {
+	// The dot product cos will only ever be 1 or -1 since the direction the car is facing and the velocity can only be the same or the opposite. 
 	float DistanceTraveledAlongTurningCircle = FVector::DotProduct(GetActorForwardVector(), Velocity) * DeltaTime;
 	float RotationAngleRadians = (DistanceTraveledAlongTurningCircle / MinTurningRadius) * SteeringThrow;
 	FQuat RotationDelta(GetActorUpVector(), RotationAngleRadians);
