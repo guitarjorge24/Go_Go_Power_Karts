@@ -36,7 +36,7 @@ private:
 	UPROPERTY(EditAnywhere)
 	float MaxDrivingForce = 10000.f; // 10,000N is the force required to cause a 1000kg car to accelerate at 10m/s^2 
 	/* Minimum radius of the car's turning circle at full lock (in meters) */
-	float MinTurningRadius  = 10.f;
+	float MinTurningRadius = 10.f;
 
 	/* Higher number means more drag and thus more air resistance. Lower number means the car is more aerodynamic. */
 	UPROPERTY(EditAnywhere)
@@ -47,6 +47,10 @@ private:
 
 	float Throttle;
 	float SteeringThrow;
+
+	FString GetEnumText(ENetRole InRole);
+	void MoveForward(float AxisValue);
+	void MoveRight(float AxisValue);
 
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_MoveForward(float AxisValue);
