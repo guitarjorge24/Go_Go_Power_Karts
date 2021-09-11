@@ -26,8 +26,15 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
 private:
 	FVector Velocity;
+
+	UPROPERTY(Replicated)
+	FVector ReplicatedLocation;
+	UPROPERTY(Replicated)
+	FRotator ReplicatedRotation;
 
 	/* Mass of the car in kg */
 	UPROPERTY(EditAnywhere)
@@ -47,7 +54,7 @@ private:
 
 	float Throttle;
 	float SteeringThrow;
-
+	
 	FString GetEnumText(ENetRole InRole);
 	void MoveForward(float AxisValue);
 	void MoveRight(float AxisValue);

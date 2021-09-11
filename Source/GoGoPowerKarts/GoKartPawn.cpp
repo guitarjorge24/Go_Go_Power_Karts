@@ -6,12 +6,14 @@
 #include "Components/InputComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "Net/UnrealNetwork.h"
 
 // Sets default values
 AGoKartPawn::AGoKartPawn()
 {
 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true;
 }
 
 // Called when the game starts or when spawned
@@ -44,6 +46,17 @@ void AGoKartPawn::Tick(float DeltaTime)
 	ApplyRotation(DeltaTime);
 	UpdateLocationFromVelocity(DeltaTime);
 
+	if(HasAuthority())
+	{
+		ReplicatedLocation = GetActorLocation();
+		ReplicatedRotation = GetActorRotation();
+	}
+	else
+	{
+		SetActorLocation(ReplicatedLocation);
+		SetActorRotation(ReplicatedRotation);
+	}
+
 	DrawDebugString(GetWorld(), FVector(0, 0, 150), GetEnumText(GetLocalRole()), this, FColor::White, DeltaTime);
 	DrawDebugString(GetWorld(), FVector(0, 0, 110), FString::Printf(TEXT("Speed: %f"), Velocity.Size()), this, FColor::Magenta, DeltaTime);
 }
@@ -54,6 +67,13 @@ void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	PlayerInputComponent->BindAxis("MoveForward", this, &AGoKartPawn::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &AGoKartPawn::MoveRight);
+}
+
+void AGoKartPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AGoKartPawn, ReplicatedLocation);
+	DOREPLIFETIME(AGoKartPawn, ReplicatedRotation);
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
