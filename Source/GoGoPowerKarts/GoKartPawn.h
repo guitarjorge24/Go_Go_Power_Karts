@@ -29,8 +29,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
+	UPROPERTY(Replicated)
 	FVector Velocity;
-
+	
 	UPROPERTY(ReplicatedUsing=OnRep_ReplicatedTransform)
 	FTransform ReplicatedTransform;
 	UFUNCTION()
@@ -52,7 +53,9 @@ private:
 	/* Higher number means more rolling resistance which slows down the car to a stop more quickly. */
 	float RollingResistanceCoefficient = 0.02f;
 
+	UPROPERTY(Replicated)
 	float Throttle;
+	UPROPERTY(Replicated)
 	float SteeringThrow;
 	
 	FString GetEnumText(ENetRole InRole);
