@@ -31,10 +31,10 @@ public:
 private:
 	FVector Velocity;
 
-	UPROPERTY(Replicated)
-	FVector ReplicatedLocation;
-	UPROPERTY(Replicated)
-	FRotator ReplicatedRotation;
+	UPROPERTY(ReplicatedUsing=OnRep_ReplicatedTransform)
+	FTransform ReplicatedTransform;
+	UFUNCTION()
+	void OnRep_ReplicatedTransform(); // OnRep functions must be UFUNCTION
 
 	/* Mass of the car in kg */
 	UPROPERTY(EditAnywhere)

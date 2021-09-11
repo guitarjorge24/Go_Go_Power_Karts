@@ -20,6 +20,11 @@ AGoKartPawn::AGoKartPawn()
 void AGoKartPawn::BeginPlay()
 {
 	Super::BeginPlay();
+
+	if (HasAuthority())
+	{
+		NetUpdateFrequency = 1;
+	}
 }
 
 // Called every frame
@@ -48,15 +53,9 @@ void AGoKartPawn::Tick(float DeltaTime)
 
 	if(HasAuthority())
 	{
-		ReplicatedLocation = GetActorLocation();
-		ReplicatedRotation = GetActorRotation();
+		ReplicatedTransform = GetTransform();
 	}
-	else
-	{
-		SetActorLocation(ReplicatedLocation);
-		SetActorRotation(ReplicatedRotation);
-	}
-
+	
 	DrawDebugString(GetWorld(), FVector(0, 0, 150), GetEnumText(GetLocalRole()), this, FColor::White, DeltaTime);
 	DrawDebugString(GetWorld(), FVector(0, 0, 110), FString::Printf(TEXT("Speed: %f"), Velocity.Size()), this, FColor::Magenta, DeltaTime);
 }
@@ -72,8 +71,14 @@ void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void AGoKartPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AGoKartPawn, ReplicatedLocation);
-	DOREPLIFETIME(AGoKartPawn, ReplicatedRotation);
+	DOREPLIFETIME(AGoKartPawn, ReplicatedTransform);
+}
+
+void AGoKartPawn::OnRep_ReplicatedTransform()
+{
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_ReplicatedLocation called."))
+	
+	SetActorTransform(ReplicatedTransform);
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
