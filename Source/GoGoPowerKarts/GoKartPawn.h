@@ -15,10 +15,10 @@ struct FGoKartMove
 	float Throttle;
 	UPROPERTY()
 	float SteeringThrow;
-	
+
 	UPROPERTY()
 	float DeltaTime;
-	
+
 	UPROPERTY()
 	float Timestamp;
 };
@@ -61,13 +61,13 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 private:
-	UPROPERTY(Replicated)
+	UPROPERTY(ReplicatedUsing=OnRep_ServerState)
+	FGoKartState ServerState;
+
 	FVector Velocity;
 	
-	UPROPERTY(ReplicatedUsing=OnRep_ReplicatedTransform)
-	FTransform ReplicatedTransform;
 	UFUNCTION()
-	void OnRep_ReplicatedTransform(); // OnRep functions must be UFUNCTION
+	void OnRep_ServerState(); // OnRep functions must be UFUNCTION
 
 	/* Mass of the car in kg */
 	UPROPERTY(EditAnywhere)
@@ -84,24 +84,23 @@ private:
 	UPROPERTY(EditAnywhere)
 	/* Higher number means more rolling resistance which slows down the car to a stop more quickly. */
 	float RollingResistanceCoefficient = 0.02f;
-
-	UPROPERTY(Replicated)
-	float Throttle;
-	UPROPERTY(Replicated)
-	float SteeringThrow;
 	
+	float Throttle;
+	float SteeringThrow;
+
 	FString GetEnumText(ENetRole InRole);
+
+	void SimulateMove(FGoKartMove Move);
+	
 	void MoveForward(float AxisValue);
 	void MoveRight(float AxisValue);
 
 	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_MoveForward(float AxisValue);
-	UFUNCTION(Server, Reliable, WithValidation)
-	void Server_MoveRight(float AxisValue);
+	void Server_SendMove(FGoKartMove Move);
 
 	FVector GetAirResistance();
 	FVector GetRollingResistance();
-	void ApplyRotation(float DeltaTime);
+	void ApplyRotation(float DeltaTime, float InSteeringThrow);
 	/* Calculates translation based on velocity. Resets velocity to zero if we collide with something */
 	void UpdateLocationFromVelocity(float DeltaTime);
 };

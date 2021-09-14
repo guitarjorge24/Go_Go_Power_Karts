@@ -32,30 +32,19 @@ void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	FVector ForwardForce = GetActorForwardVector() * MaxDrivingForce * Throttle;
-
-	FVector NetForce = ForwardForce + GetAirResistance();
-	if (!(Velocity.Size() < 0.015f))
+	if (IsLocallyControlled()) // true for autonomous proxy, false for simulated proxy.
 	{
-		NetForce += GetRollingResistance();
+		FGoKartMove Move;
+		Move.DeltaTime = DeltaTime;
+		Move.Throttle = Throttle;
+		Move.SteeringThrow = SteeringThrow;
+		// Move.Timestamp =
+
+		Server_SendMove(Move);
+		SimulateMove(Move);
 	}
-	else if (Throttle < 0.1f)
-	{
-		Velocity = FVector::ZeroVector;
-	}
 
-	FVector Acceleration = NetForce / Mass;
-
-	Velocity += Acceleration * DeltaTime; // add the effect of acceleration on this frame
-
-	ApplyRotation(DeltaTime);
-	UpdateLocationFromVelocity(DeltaTime);
-
-	if(HasAuthority())
-	{
-		ReplicatedTransform = GetTransform();
-	}
-	
+	// Print the ENetRole and Speed of each car on the screen
 	DrawDebugString(GetWorld(), FVector(0, 0, 150), GetEnumText(GetLocalRole()), this, FColor::White, DeltaTime);
 	DrawDebugString(GetWorld(), FVector(0, 0, 110), FString::Printf(TEXT("Speed: %f"), Velocity.Size()), this, FColor::Magenta, DeltaTime);
 }
@@ -71,49 +60,39 @@ void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponen
 void AGoKartPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
-	DOREPLIFETIME(AGoKartPawn, ReplicatedTransform);
-	DOREPLIFETIME(AGoKartPawn, Velocity);
-	DOREPLIFETIME(AGoKartPawn, Throttle);
-	DOREPLIFETIME(AGoKartPawn, SteeringThrow);
+	DOREPLIFETIME(AGoKartPawn, ServerState);
 }
 
-void AGoKartPawn::OnRep_ReplicatedTransform()
+void AGoKartPawn::OnRep_ServerState()
 {
-	UE_LOG(LogTemp, Warning, TEXT("OnRep_ReplicatedLocation called."))
-	
-	SetActorTransform(ReplicatedTransform);
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_ServerState called."))
+
+	SetActorTransform(ServerState.Transform);
+	Velocity = ServerState.Velocity;
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
 {
 	Throttle = AxisValue;
-	Server_MoveForward(AxisValue);
 }
 
 void AGoKartPawn::MoveRight(float AxisValue)
 {
 	SteeringThrow = AxisValue;
-	Server_MoveRight(AxisValue);
 }
 
-bool AGoKartPawn::Server_MoveForward_Validate(float AxisValue)
+bool AGoKartPawn::Server_SendMove_Validate(FGoKartMove Move)
 {
-	return FMath::Abs(AxisValue) <= 1.f;
+	// return FMath::Abs(Move) <= 1.f;
+	return true; // #ToDo: Improve 
 }
 
-void AGoKartPawn::Server_MoveForward_Implementation(float AxisValue)
+void AGoKartPawn::Server_SendMove_Implementation(FGoKartMove Move)
 {
-	Throttle = AxisValue;
-}
-
-bool AGoKartPawn::Server_MoveRight_Validate(float AxisValue)
-{
-	return FMath::Abs(AxisValue) <= 1.f;
-}
-
-void AGoKartPawn::Server_MoveRight_Implementation(float AxisValue)
-{
-	SteeringThrow = AxisValue;
+	SimulateMove(Move);
+	ServerState.LastMove = Move;
+	ServerState.Transform = GetTransform();
+	ServerState.Velocity = Velocity;
 }
 
 FString AGoKartPawn::GetEnumText(ENetRole InRole)
@@ -129,6 +108,28 @@ FString AGoKartPawn::GetEnumText(ENetRole InRole)
 	}
 }
 
+void AGoKartPawn::SimulateMove(FGoKartMove Move)
+{
+	FVector ForwardForce = GetActorForwardVector() * MaxDrivingForce * Move.Throttle;
+
+	FVector NetForce = ForwardForce + GetAirResistance();
+	if (!(Velocity.Size() < 0.015f))
+	{
+		NetForce += GetRollingResistance();
+	}
+	else if (Throttle < 0.1f)
+	{
+		Velocity = FVector::ZeroVector;
+	}
+
+	FVector Acceleration = NetForce / Mass;
+
+	Velocity += Acceleration * Move.DeltaTime; // add the effect of acceleration on this frame
+
+	ApplyRotation(Move.DeltaTime, Move.SteeringThrow);
+	UpdateLocationFromVelocity(Move.DeltaTime);
+
+}
 
 FVector AGoKartPawn::GetAirResistance()
 {
@@ -145,11 +146,11 @@ FVector AGoKartPawn::GetRollingResistance()
 	return RollingResistance;
 }
 
-void AGoKartPawn::ApplyRotation(float DeltaTime)
+void AGoKartPawn::ApplyRotation(float DeltaTime, float InSteeringThrow)
 {
 	// The dot product cos will only ever be 1 or -1 since the direction the car is facing and the velocity can only be the same or the opposite. 
 	float DistanceTraveledAlongTurningCircle = FVector::DotProduct(GetActorForwardVector(), Velocity) * DeltaTime;
-	float RotationAngleRadians = (DistanceTraveledAlongTurningCircle / MinTurningRadius) * SteeringThrow;
+	float RotationAngleRadians = (DistanceTraveledAlongTurningCircle / MinTurningRadius) * InSteeringThrow;
 	FQuat RotationDelta(GetActorUpVector(), RotationAngleRadians);
 
 	// Rotate velocity vector by Quat's angle. Otherwise, only the mesh rotates but we keep moving in the same direction.
