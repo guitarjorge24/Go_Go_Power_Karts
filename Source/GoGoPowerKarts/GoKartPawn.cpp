@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GoKartPawn.h"
 
 #include "Components/InputComponent.h"
@@ -16,7 +15,6 @@ AGoKartPawn::AGoKartPawn()
 	bReplicates = true;
 }
 
-// Called when the game starts or when spawned
 void AGoKartPawn::BeginPlay()
 {
 	Super::BeginPlay();
@@ -27,19 +25,21 @@ void AGoKartPawn::BeginPlay()
 	}
 }
 
-// Called every frame
 void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 	if (IsLocallyControlled()) // true for autonomous proxy, false for simulated proxy.
 	{
-		FGoKartMove Move;
-		Move.DeltaTime = DeltaTime;
-		Move.Throttle = Throttle;
-		Move.SteeringThrow = SteeringThrow;
-		// Move.Timestamp =
+		FGoKartMove Move = CreateMove(DeltaTime);
 
+		// In the case of a host listen server where the server has a locally controlled autonomous proxy.
+		// The server has no need of adding things to the queue.
+		if(!HasAuthority())
+		{
+			UnacknowledgedMoves.Add(Move);
+			UE_LOG(LogTemp, Warning, TEXT("Queue Lenght: %d"), UnacknowledgedMoves.Num());
+		}
 		Server_SendMove(Move);
 		SimulateMove(Move);
 	}
@@ -69,6 +69,14 @@ void AGoKartPawn::OnRep_ServerState()
 
 	SetActorTransform(ServerState.Transform);
 	Velocity = ServerState.Velocity;
+
+	ClearAcknowledgedMoves(ServerState.LastMove);
+
+	for (const FGoKartMove& Move : UnacknowledgedMoves)
+	{
+		SimulateMove(Move);
+	}
+	
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
@@ -108,7 +116,32 @@ FString AGoKartPawn::GetEnumText(ENetRole InRole)
 	}
 }
 
-void AGoKartPawn::SimulateMove(FGoKartMove Move)
+FGoKartMove AGoKartPawn::CreateMove(float DeltaTime)
+{
+	FGoKartMove Move;
+	Move.DeltaTime = DeltaTime;
+	Move.Throttle = Throttle;
+	Move.SteeringThrow = SteeringThrow;
+	Move.Timestamp = GetWorld()->TimeSeconds;
+	return Move;
+}
+
+void AGoKartPawn::ClearAcknowledgedMoves(FGoKartMove LastMove)
+{
+	TArray<FGoKartMove> NewMoves;
+
+	for (const FGoKartMove& Move : UnacknowledgedMoves)
+	{
+		if (Move.Timestamp > LastMove.Timestamp)
+		{
+			NewMoves.Add(Move);
+		}
+	}
+
+	UnacknowledgedMoves = NewMoves;
+}
+
+void AGoKartPawn::SimulateMove(const FGoKartMove& Move)
 {
 	FVector ForwardForce = GetActorForwardVector() * MaxDrivingForce * Move.Throttle;
 

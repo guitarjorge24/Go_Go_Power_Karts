@@ -88,9 +88,14 @@ private:
 	float Throttle;
 	float SteeringThrow;
 
+	TArray<FGoKartMove> UnacknowledgedMoves;
+
 	FString GetEnumText(ENetRole InRole);
 
-	void SimulateMove(FGoKartMove Move);
+	FGoKartMove CreateMove(float DeltaTime);
+	/* Sets the UnacknowledgedMoves array to a new array that only contains the moves that happened after ServerState.LastMove */
+	void ClearAcknowledgedMoves(FGoKartMove LastMove);
+	void SimulateMove(const FGoKartMove& Move);
 	
 	void MoveForward(float AxisValue);
 	void MoveRight(float AxisValue);
