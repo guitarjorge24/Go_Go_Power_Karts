@@ -29,7 +29,8 @@ void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	if (IsLocallyControlled()) // true for autonomous proxy, false for simulated proxy.
+	// true for autonomous proxy, false for simulated proxy. Also true for locally controlled pawn with Authority on a listen server
+	if (IsLocallyControlled()) 
 	{
 		FGoKartMove Move = CreateMove(DeltaTime);
 
