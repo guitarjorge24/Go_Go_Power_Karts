@@ -29,20 +29,30 @@ void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	// true for autonomous proxy, false for simulated proxy. Also true for locally controlled pawn with Authority on a listen server
-	if (IsLocallyControlled()) 
+	// If this pawn is on a client and is locally controlled
+	if (GetLocalRole() == ROLE_AutonomousProxy)
 	{
 		FGoKartMove Move = CreateMove(DeltaTime);
-
-		// In the case of a host listen server where the server has a locally controlled autonomous proxy.
-		// The server has no need of adding things to the queue.
-		if(!HasAuthority())
-		{
-			UnacknowledgedMoves.Add(Move);
-			UE_LOG(LogTemp, Warning, TEXT("Queue Lenght: %d"), UnacknowledgedMoves.Num());
-		}
-		Server_SendMove(Move);
+		UnacknowledgedMoves.Add(Move);
+		UE_LOG(LogTemp, Warning, TEXT("Num of Unacknowledged Moves in Queue: %d"), UnacknowledgedMoves.Num());
+		
 		SimulateMove(Move);
+		Server_SendMove(Move);
+	}
+
+	// If this pawn is on a listen server (it has authority) but the pawn is also locally controlled
+	if (GetLocalRole() == ROLE_Authority && IsLocallyControlled())
+	{
+		// The server has no need of adding moves to the UnacknowledgedMoves queue.
+
+		FGoKartMove Move = CreateMove(DeltaTime);
+		Server_SendMove(Move);
+	}
+
+	// If this pawn is on a client and is not locally controlled
+	if (GetLocalRole() == ROLE_SimulatedProxy)
+	{
+		SimulateMove(ServerState.LastMove);
 	}
 
 	// Print the ENetRole and Speed of each car on the screen
@@ -73,11 +83,12 @@ void AGoKartPawn::OnRep_ServerState()
 
 	ClearAcknowledgedMoves(ServerState.LastMove);
 
+	// Locally replay all the moves that have not yet been simulated on the server.
+	// This is all done in 1 frame resulting in a mix of server state + local prediction  
 	for (const FGoKartMove& Move : UnacknowledgedMoves)
 	{
 		SimulateMove(Move);
 	}
-	
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
