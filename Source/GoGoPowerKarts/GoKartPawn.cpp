@@ -13,6 +13,8 @@ AGoKartPawn::AGoKartPawn()
 	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+
+	MovementComponent = CreateDefaultSubobject<UGoKartMovementComponent>(TEXT("MovementComp"));
 }
 
 void AGoKartPawn::BeginPlay()
@@ -29,14 +31,16 @@ void AGoKartPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (!ensure(MovementComponent)) return;
+
 	// If this pawn is on a client and is locally controlled
 	if (GetLocalRole() == ROLE_AutonomousProxy)
 	{
-		FGoKartMove Move = CreateMove(DeltaTime);
+		FGoKartMove Move = MovementComponent->CreateMove(DeltaTime);
 		UnacknowledgedMoves.Add(Move);
 		UE_LOG(LogTemp, Warning, TEXT("Num of Unacknowledged Moves in Queue: %d"), UnacknowledgedMoves.Num());
-		
-		SimulateMove(Move);
+
+		MovementComponent->SimulateMove(Move);
 		Server_SendMove(Move);
 	}
 
@@ -45,19 +49,19 @@ void AGoKartPawn::Tick(float DeltaTime)
 	{
 		// The server has no need of adding moves to the UnacknowledgedMoves queue.
 
-		FGoKartMove Move = CreateMove(DeltaTime);
+		FGoKartMove Move = MovementComponent->CreateMove(DeltaTime);
 		Server_SendMove(Move);
 	}
 
 	// If this pawn is on a client and is not locally controlled
 	if (GetLocalRole() == ROLE_SimulatedProxy)
 	{
-		SimulateMove(ServerState.LastMove);
+		MovementComponent->SimulateMove(ServerState.LastMove);
 	}
 
 	// Print the ENetRole and Speed of each car on the screen
 	DrawDebugString(GetWorld(), FVector(0, 0, 150), GetEnumText(GetLocalRole()), this, FColor::White, DeltaTime);
-	DrawDebugString(GetWorld(), FVector(0, 0, 110), FString::Printf(TEXT("Speed: %f"), Velocity.Size()), this, FColor::Magenta, DeltaTime);
+	DrawDebugString(GetWorld(), FVector(0, 0, 110), FString::Printf(TEXT("Speed: %f"), MovementComponent->Velocity.Size()), this, FColor::Magenta, DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -76,10 +80,12 @@ void AGoKartPawn::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 
 void AGoKartPawn::OnRep_ServerState()
 {
+	if (!ensure(MovementComponent)) return;
+
 	UE_LOG(LogTemp, Warning, TEXT("OnRep_ServerState called."))
 
 	SetActorTransform(ServerState.Transform);
-	Velocity = ServerState.Velocity;
+	MovementComponent->Velocity = ServerState.Velocity;
 
 	ClearAcknowledgedMoves(ServerState.LastMove);
 
@@ -87,18 +93,20 @@ void AGoKartPawn::OnRep_ServerState()
 	// This is all done in 1 frame resulting in a mix of server state + local prediction  
 	for (const FGoKartMove& Move : UnacknowledgedMoves)
 	{
-		SimulateMove(Move);
+		MovementComponent->SimulateMove(Move);
 	}
 }
 
 void AGoKartPawn::MoveForward(float AxisValue)
 {
-	Throttle = AxisValue;
+	if (!ensure(MovementComponent)) return;
+	MovementComponent->Throttle = AxisValue;
 }
 
 void AGoKartPawn::MoveRight(float AxisValue)
 {
-	SteeringThrow = AxisValue;
+	if (!ensure(MovementComponent)) return;
+	MovementComponent->SteeringThrow = AxisValue;
 }
 
 bool AGoKartPawn::Server_SendMove_Validate(FGoKartMove Move)
@@ -109,10 +117,12 @@ bool AGoKartPawn::Server_SendMove_Validate(FGoKartMove Move)
 
 void AGoKartPawn::Server_SendMove_Implementation(FGoKartMove Move)
 {
-	SimulateMove(Move);
+	if (!ensure(MovementComponent)) return;
+
+	MovementComponent->SimulateMove(Move);
 	ServerState.LastMove = Move;
 	ServerState.Transform = GetTransform();
-	ServerState.Velocity = Velocity;
+	ServerState.Velocity = MovementComponent->Velocity;
 }
 
 FString AGoKartPawn::GetEnumText(ENetRole InRole)
@@ -128,16 +138,6 @@ FString AGoKartPawn::GetEnumText(ENetRole InRole)
 	}
 }
 
-FGoKartMove AGoKartPawn::CreateMove(float DeltaTime)
-{
-	FGoKartMove Move;
-	Move.DeltaTime = DeltaTime;
-	Move.Throttle = Throttle;
-	Move.SteeringThrow = SteeringThrow;
-	Move.Timestamp = GetWorld()->TimeSeconds;
-	return Move;
-}
-
 void AGoKartPawn::ClearAcknowledgedMoves(FGoKartMove LastMove)
 {
 	TArray<FGoKartMove> NewMoves;
@@ -151,67 +151,4 @@ void AGoKartPawn::ClearAcknowledgedMoves(FGoKartMove LastMove)
 	}
 
 	UnacknowledgedMoves = NewMoves;
-}
-
-void AGoKartPawn::SimulateMove(const FGoKartMove& Move)
-{
-	FVector ForwardForce = GetActorForwardVector() * MaxDrivingForce * Move.Throttle;
-
-	FVector NetForce = ForwardForce + GetAirResistance();
-	if (!(Velocity.Size() < 0.015f))
-	{
-		NetForce += GetRollingResistance();
-	}
-	else if (Throttle < 0.1f)
-	{
-		Velocity = FVector::ZeroVector;
-	}
-
-	FVector Acceleration = NetForce / Mass;
-
-	Velocity += Acceleration * Move.DeltaTime; // add the effect of acceleration on this frame
-
-	ApplyRotation(Move.DeltaTime, Move.SteeringThrow);
-	UpdateLocationFromVelocity(Move.DeltaTime);
-
-}
-
-FVector AGoKartPawn::GetAirResistance()
-{
-	// Formula: Air Resistance = Speed^2 * DragCoefficient. Direction is opposite to velocity.
-	// SizeSquared returns the speed of the velocity and then squares it.
-	return -Velocity.GetSafeNormal() * Velocity.SizeSquared() * DragCoefficient;
-}
-
-FVector AGoKartPawn::GetRollingResistance()
-{
-	float GravityAcceleration = -GetWorld()->GetGravityZ() / 100.f; // divide by 100 to convert cm/s to m/s
-	float NormalForce = Mass * GravityAcceleration;
-	FVector RollingResistance = -Velocity.GetSafeNormal() * RollingResistanceCoefficient * NormalForce;
-	return RollingResistance;
-}
-
-void AGoKartPawn::ApplyRotation(float DeltaTime, float InSteeringThrow)
-{
-	// The dot product cos will only ever be 1 or -1 since the direction the car is facing and the velocity can only be the same or the opposite. 
-	float DistanceTraveledAlongTurningCircle = FVector::DotProduct(GetActorForwardVector(), Velocity) * DeltaTime;
-	float RotationAngleRadians = (DistanceTraveledAlongTurningCircle / MinTurningRadius) * InSteeringThrow;
-	FQuat RotationDelta(GetActorUpVector(), RotationAngleRadians);
-
-	// Rotate velocity vector by Quat's angle. Otherwise, only the mesh rotates but we keep moving in the same direction.
-	Velocity = RotationDelta.RotateVector(Velocity);
-
-	AddActorWorldRotation(RotationDelta); // Rotate the car mesh itself.
-}
-
-void AGoKartPawn::UpdateLocationFromVelocity(float DeltaTime)
-{
-	FVector Translation = Velocity * 100 * DeltaTime; // multiply by 100 to convert cm to meters
-	FHitResult SweepHitResult;
-	AddActorWorldOffset(Translation, true, &SweepHitResult);
-	// Reset velocity back to 0 if we hit something.
-	if (SweepHitResult.IsValidBlockingHit())
-	{
-		Velocity = FVector::ZeroVector;
-	}
 }
