@@ -4,23 +4,18 @@
 
 #include "Net/UnrealNetwork.h"
 
-// Sets default values for this component's properties
 UGoKartMovementReplicationComp::UGoKartMovementReplicationComp()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.
 	PrimaryComponentTick.bCanEverTick = true;
-
 	SetIsReplicated(true);
 }
 
-// Called when the game starts
 void UGoKartMovementReplicationComp::BeginPlay()
 {
 	Super::BeginPlay();
 	MovementComponent = GetOwner()->FindComponentByClass<UGoKartMovementComponent>();
 }
 
-// Called every frame
 void UGoKartMovementReplicationComp::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);

@@ -6,10 +6,8 @@
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 
-// Sets default values
 AGoKartPawn::AGoKartPawn()
 {
-	// Set this pawn to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
@@ -36,7 +34,6 @@ void AGoKartPawn::Tick(float DeltaTime)
 	DrawDebugString(GetWorld(), FVector(0, 0, 110), FString::Printf(TEXT("Speed: %f"), MovementComponent->Velocity.Size()), this, FColor::Magenta, DeltaTime);
 }
 
-// Called to bind functionality to input
 void AGoKartPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -68,5 +65,3 @@ FString AGoKartPawn::GetEnumText(ENetRole InRole)
 	default: return "Error";
 	}
 }
-
-

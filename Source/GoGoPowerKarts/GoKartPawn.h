@@ -9,8 +9,6 @@
 #include "GameFramework/Pawn.h"
 #include "GoKartPawn.generated.h"
 
-
-
 UCLASS()
 class GOGOPOWERKARTS_API AGoKartPawn : public APawn
 {
