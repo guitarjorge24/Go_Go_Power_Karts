@@ -22,24 +22,22 @@ void UGoKartMovementReplicationComp::TickComponent(float DeltaTime, ELevelTick T
 
 	if (!ensure(MovementComponent)) return;
 
+	FGoKartMove LastMove = MovementComponent->GetLastMove();
+
 	// If this pawn is on a client and is locally controlled
 	if (GetOwnerRole() == ROLE_AutonomousProxy)
 	{
-		FGoKartMove Move = MovementComponent->CreateMove(DeltaTime);
-		UnacknowledgedMoves.Add(Move);
+		UnacknowledgedMoves.Add(LastMove);
 		UE_LOG(LogTemp, Warning, TEXT("Num of Unacknowledged Moves in Queue: %d"), UnacknowledgedMoves.Num());
 
-		MovementComponent->SimulateMove(Move);
-		Server_SendMove(Move);
+		Server_SendMove(LastMove);
 	}
 
 	// If this pawn is on a listen server (it has authority) but the pawn is also locally controlled
 	if (GetOwnerRole() == ROLE_Authority && Cast<APawn>(GetOwner())->IsLocallyControlled())
 	{
 		// The server has no need of adding moves to the UnacknowledgedMoves queue.
-
-		FGoKartMove Move = MovementComponent->CreateMove(DeltaTime);
-		Server_SendMove(Move);
+		UpdateServerState(LastMove);
 	}
 
 	// If this pawn is on a client and is not locally controlled
@@ -55,6 +53,14 @@ void UGoKartMovementReplicationComp::GetLifetimeReplicatedProps(TArray<FLifetime
 	DOREPLIFETIME(UGoKartMovementReplicationComp, ServerState);
 }
 
+/** Uses argument to update the ServerState struct members (LastMove, Transform, Velocity) */
+void UGoKartMovementReplicationComp::UpdateServerState(const FGoKartMove& Move)
+{
+	ServerState.LastMove = Move;
+	ServerState.Transform = GetOwner()->GetTransform();
+	ServerState.Velocity = MovementComponent->Velocity;
+}
+
 bool UGoKartMovementReplicationComp::Server_SendMove_Validate(FGoKartMove Move)
 {
 	// return FMath::Abs(Move) <= 1.f;
@@ -66,9 +72,7 @@ void UGoKartMovementReplicationComp::Server_SendMove_Implementation(FGoKartMove 
 	if (!ensure(MovementComponent)) return;
 
 	MovementComponent->SimulateMove(Move);
-	ServerState.LastMove = Move;
-	ServerState.Transform = GetOwner()->GetTransform();
-	ServerState.Velocity = MovementComponent->Velocity;
+	UpdateServerState(Move);
 }
 
 void UGoKartMovementReplicationComp::ClearAcknowledgedMoves(FGoKartMove LastMove)

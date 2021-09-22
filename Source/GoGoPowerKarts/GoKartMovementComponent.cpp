@@ -15,6 +15,13 @@ void UGoKartMovementComponent::BeginPlay()
 void UGoKartMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+	if (GetOwnerRole() == ROLE_AutonomousProxy ||
+		(GetOwnerRole() == ROLE_Authority && Cast<APawn>(GetOwner())->IsLocallyControlled())	)
+	{
+		LastMove = CreateMove(DeltaTime);
+		SimulateMove(LastMove);
+	}
 }
 
 FGoKartMove UGoKartMovementComponent::CreateMove(float DeltaTime)
@@ -36,7 +43,7 @@ void UGoKartMovementComponent::SimulateMove(const FGoKartMove& Move)
 	{
 		NetForce += GetRollingResistance();
 	}
-	else if (Throttle < 0.1f)
+	else if (Move.Throttle < 0.1f)
 	{
 		Velocity = FVector::ZeroVector;
 	}

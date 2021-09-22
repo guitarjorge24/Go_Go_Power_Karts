@@ -40,15 +40,18 @@ protected:
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-	
+
 public:
 	float Throttle;
 	float SteeringThrow;
 	FVector Velocity;
 
-	FGoKartMove CreateMove(float DeltaTime);
+	/** Getter function for LastMove */
+	FGoKartMove GetLastMove() { return LastMove; };
+	/** Uses the input data from a Move (steering throw & throttle) and delta time to set the car's velocity for this frame.
+	*   Then rotates the velocity vector according to the steering throw and finally updates the car's location based on velocity. */
 	void SimulateMove(const FGoKartMove& Move);
-	
+
 private:
 	/** Mass of the car in kg */
 	UPROPERTY(EditAnywhere)
@@ -66,9 +69,10 @@ private:
 	/** Higher number means more rolling resistance which slows down the car to a stop more quickly. */
 	float RollingResistanceCoefficient = 0.02f;
 
+	FGoKartMove LastMove;
 
-
-
+	FGoKartMove CreateMove(float DeltaTime);
+	
 	FVector GetAirResistance();
 	FVector GetRollingResistance();
 

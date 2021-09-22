@@ -31,7 +31,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -42,8 +42,9 @@ private:
 	/** Used to store the car's transform & velocity in the server and the last move that was simulated on the server */
 	UPROPERTY(ReplicatedUsing=OnRep_ServerState)
 	FGoKartState ServerState;
-	
-	/** Server RPC that sends Move to the server, simulates the move on the server, and then updates the ServerState */
+
+	void UpdateServerState(const FGoKartMove& Move);
+	/** Server RPC that sends Move to the server, simulates the move on the server, and then calls UpdateServerState() */
 	UFUNCTION(Server, Reliable, WithValidation)
 	void Server_SendMove(FGoKartMove Move);
 	/** Sets the UnacknowledgedMoves array to a new array that only contains the moves that happened after ServerState.LastMove */
