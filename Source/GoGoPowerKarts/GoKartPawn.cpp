@@ -10,7 +10,7 @@ AGoKartPawn::AGoKartPawn()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
-
+	
 	MovementComponent = CreateDefaultSubobject<UGoKartMovementComponent>(TEXT("MovementComp"));
 	MovementReplicationComp = CreateDefaultSubobject<UGoKartMovementReplicationComp>(TEXT("MovementReplicationComp"));
 }
@@ -19,6 +19,8 @@ void AGoKartPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
+	SetReplicateMovement(false); // Has to be called in BeginPlay and not constructor
+	
 	if (HasAuthority())
 	{
 		NetUpdateFrequency = 1;

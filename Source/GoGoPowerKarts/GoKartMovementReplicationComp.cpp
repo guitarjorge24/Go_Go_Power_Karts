@@ -43,7 +43,7 @@ void UGoKartMovementReplicationComp::TickComponent(float DeltaTime, ELevelTick T
 	// If this pawn is on a client and is not locally controlled
 	if (GetOwnerRole() == ROLE_SimulatedProxy)
 	{
-		MovementComponent->SimulateMove(ServerState.LastMove);
+		ClientTick(DeltaTime);
 	}
 }
 
@@ -92,6 +92,18 @@ void UGoKartMovementReplicationComp::ClearAcknowledgedMoves(FGoKartMove LastMove
 
 void UGoKartMovementReplicationComp::OnRep_ServerState()
 {
+	if (GetOwnerRole() == ROLE_AutonomousProxy)
+	{
+		AutonomousProxy_OnRep_ServerState();
+	}
+	else if (GetOwnerRole() == ROLE_SimulatedProxy)
+	{
+		SimulateProxy_OnRep_ServerState();
+	}
+}
+
+void UGoKartMovementReplicationComp::AutonomousProxy_OnRep_ServerState()
+{
 	if (!ensure(MovementComponent)) return;
 
 	UE_LOG(LogTemp, Warning, TEXT("OnRep_ServerState called."))
@@ -107,4 +119,28 @@ void UGoKartMovementReplicationComp::OnRep_ServerState()
 	{
 		MovementComponent->SimulateMove(Move);
 	}
+}
+
+void UGoKartMovementReplicationComp::SimulateProxy_OnRep_ServerState()
+{
+	ClientTimeBetweenLast2Updates = ClientTimeSinceLastServerUpdate;
+	ClientTimeSinceLastServerUpdate = 0;
+
+	ClientStartLocation = GetOwner()->GetActorLocation();
+}
+
+void UGoKartMovementReplicationComp::ClientTick(float DeltaTime)
+{
+	ClientTimeSinceLastServerUpdate += DeltaTime;
+
+	// Lerping very small numbers 
+	if (ClientTimeBetweenLast2Updates < KINDA_SMALL_NUMBER) return;
+
+	FVector TargetLocation = ServerState.Transform.GetLocation();
+	float LerpRatio = ClientTimeSinceLastServerUpdate / ClientTimeBetweenLast2Updates;
+	FVector StartLocation = ClientStartLocation;
+
+	// StartLocation is the location you start on the client. TargetLocation is the location the car has moved to on the server that we want to lerp to.
+	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
+	GetOwner()->SetActorLocation(NewLocation);
 }
