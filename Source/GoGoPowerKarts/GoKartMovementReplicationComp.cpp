@@ -126,7 +126,8 @@ void UGoKartMovementReplicationComp::SimulateProxy_OnRep_ServerState()
 	ClientTimeBetweenLast2Updates = ClientTimeSinceLastServerUpdate;
 	ClientTimeSinceLastServerUpdate = 0;
 
-	ClientStartLocation = GetOwner()->GetActorLocation();
+	// Get location and rotation from server and store it in the client
+	ClientStartTransform = GetOwner()->GetActorTransform();
 }
 
 void UGoKartMovementReplicationComp::ClientTick(float DeltaTime)
@@ -138,9 +139,12 @@ void UGoKartMovementReplicationComp::ClientTick(float DeltaTime)
 
 	FVector TargetLocation = ServerState.Transform.GetLocation();
 	float LerpRatio = ClientTimeSinceLastServerUpdate / ClientTimeBetweenLast2Updates;
-	FVector StartLocation = ClientStartLocation;
+	FVector StartLocation = ClientStartTransform.GetLocation();
 
 	// StartLocation is the location you start on the client. TargetLocation is the location the car has moved to on the server that we want to lerp to.
 	FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
 	GetOwner()->SetActorLocation(NewLocation);
+
+	FQuat NewRotation = FQuat::Slerp(ClientStartTransform.GetRotation(), ServerState.Transform.GetRotation(), LerpRatio);
+	GetOwner()->SetActorRotation(NewRotation);
 }
