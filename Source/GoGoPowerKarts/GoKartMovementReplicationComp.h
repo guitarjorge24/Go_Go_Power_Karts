@@ -43,6 +43,7 @@ private:
 	float ClientTimeSinceLastServerUpdate = 0.f;
 	float ClientTimeBetweenLast2Updates = 0.f;
 	FTransform ClientStartTransform;
+	FVector ClientStartVelocity;
 	
 	/** Used to store the car's transform & velocity in the server and the last move that was simulated on the server */
 	UPROPERTY(ReplicatedUsing=OnRep_ServerState)
