@@ -140,27 +140,49 @@ void UGoKartMovementReplicationComp::ClientTick(float DeltaTime)
 	// interpolating between very small numbers can result in errors
 	if (ClientTimeBetweenLast2Updates < KINDA_SMALL_NUMBER) return;
 	if (!ensure(MovementComponent)) return;
-	
-	FVector TargetLocation = ServerState.Transform.GetLocation();
+
 	float LerpRatio = ClientTimeSinceLastServerUpdate / ClientTimeBetweenLast2Updates;
-	FVector StartLocation = ClientStartTransform.GetLocation();
+	FHermiteCubicSpline Spline = CreateSpline();
+	
+	InterpolateLocation(LerpRatio, Spline);
+	InterpolateVelocity(LerpRatio, Spline);
+	InterpolateRotation(LerpRatio);
+}
+
+FHermiteCubicSpline UGoKartMovementReplicationComp::CreateSpline()
+{
+	FHermiteCubicSpline Spline;
+
+	Spline.TargetLocation = ServerState.Transform.GetLocation();
+	Spline.StartLocation = ClientStartTransform.GetLocation();
 
 	// derivative = delta location / LerpRatio = delta location/ClientTimeSinceLastServerUpdate *  ClientTimeBetweenLast2Updates 
-	FVector StartDerivative = ClientStartVelocity * ClientTimeBetweenLast2Updates * 100; // *100 because velocity is m/s but location is cm
-	FVector TargetDerivative = ServerState.Velocity * ClientTimeBetweenLast2Updates * 100; 
-	FVector NewLocation = FMath::CubicInterp(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+	Spline.StartDerivative = ClientStartVelocity * ClientTimeBetweenLast2Updates * 100; // *100 because velocity is m/s but location is cm
+	Spline.TargetDerivative = ServerState.Velocity * ClientTimeBetweenLast2Updates * 100;
 
 	// #Archived: Old method using linear interpolation
 	// StartLocation is the location you start on the client. TargetLocation is the location the car has moved to on the server that we want to lerp to.
 	// FVector NewLocation = FMath::LerpStable(StartLocation, TargetLocation, LerpRatio);
-	
-	GetOwner()->SetActorLocation(NewLocation);
 
+	return Spline;
+}
+
+void UGoKartMovementReplicationComp::InterpolateLocation(float LerpRatio, const FHermiteCubicSpline& Spline)
+{
+	FVector NewLocation = Spline.InterpolateLocation(LerpRatio);
+	GetOwner()->SetActorLocation(NewLocation);
+}
+
+void UGoKartMovementReplicationComp::InterpolateVelocity(float LerpRatio, const FHermiteCubicSpline& Spline)
+{
 	// This is the new velocity in between the start and target location
-	FVector NewDerivative = FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio);
+	FVector NewDerivative = Spline.InterpolateDerivative(LerpRatio);
 	FVector NewVelocity = NewDerivative / (ClientTimeBetweenLast2Updates * 100);
 	MovementComponent->Velocity = NewVelocity;
-	
+}
+
+void UGoKartMovementReplicationComp::InterpolateRotation(float LerpRatio)
+{
 	FQuat NewRotation = FQuat::Slerp(ClientStartTransform.GetRotation(), ServerState.Transform.GetRotation(), LerpRatio);
 	GetOwner()->SetActorRotation(NewRotation);
 }

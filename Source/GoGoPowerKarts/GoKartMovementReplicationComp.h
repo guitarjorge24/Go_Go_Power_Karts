@@ -20,6 +20,21 @@ struct FGoKartState
 	FGoKartMove LastMove;
 };
 
+struct FHermiteCubicSpline
+{
+	FVector StartLocation, StartDerivative, TargetLocation, TargetDerivative, LerpRatio;
+
+	FVector InterpolateLocation(float InLerpRatio) const
+	{
+		return FMath::CubicInterp(StartLocation, StartDerivative, TargetLocation, TargetDerivative, InLerpRatio);
+	}
+	
+	FVector InterpolateDerivative(float InLerpRatio) const
+	{
+		return FMath::CubicInterpDerivative(StartLocation, StartDerivative, TargetLocation, TargetDerivative, InLerpRatio);
+	}
+};
+
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class GOGOPOWERKARTS_API UGoKartMovementReplicationComp : public UActorComponent
 {
@@ -63,4 +78,8 @@ private:
 	void OnRep_ServerState(); // OnRep functions must be UFUNCTION
 
 	void ClientTick(float DeltaTime);
+	FHermiteCubicSpline CreateSpline();
+	void InterpolateLocation(float LerpRatio, const FHermiteCubicSpline& Spline);
+	void InterpolateVelocity(float LerpRatio, const FHermiteCubicSpline& Spline);
+	void InterpolateRotation(float LerpRatio);
 };
