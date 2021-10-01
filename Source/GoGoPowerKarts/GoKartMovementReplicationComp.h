@@ -53,6 +53,8 @@ public:
 private:
 	UPROPERTY()
 	UGoKartMovementComponent* MovementComponent;
+	UPROPERTY()
+	USceneComponent* MeshOffsetRoot;
 	TArray<FGoKartMove> UnacknowledgedMoves;
 	
 	float ClientTimeSinceLastServerUpdate = 0.f;
@@ -63,6 +65,9 @@ private:
 	/** Used to store the car's transform & velocity in the server and the last move that was simulated on the server */
 	UPROPERTY(ReplicatedUsing=OnRep_ServerState)
 	FGoKartState ServerState;
+
+	UFUNCTION(BlueprintCallable)
+	void SetMeshOffsetRoot(USceneComponent* Root) {MeshOffsetRoot = Root;}
 	
 	void UpdateServerState(const FGoKartMove& Move);
 	/** Server RPC that sends Move to the server, simulates the move on the server, and then calls UpdateServerState() */

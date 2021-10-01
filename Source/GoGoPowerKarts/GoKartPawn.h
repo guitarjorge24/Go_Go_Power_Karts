@@ -27,7 +27,7 @@ public:
 private:
 	UPROPERTY(VisibleAnywhere) 	// VisibleAnywhere so that we can select the movement component on the Editor and see its properties
 	UGoKartMovementComponent* MovementComponent;
-	UPROPERTY(VisibleAnywhere) 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess="true")) 
 	UGoKartMovementReplicationComp* MovementReplicationComp;
 	
 	FString GetEnumText(ENetRole InRole);

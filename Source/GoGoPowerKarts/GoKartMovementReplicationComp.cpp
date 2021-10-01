@@ -128,9 +128,16 @@ void UGoKartMovementReplicationComp::SimulateProxy_OnRep_ServerState()
 	ClientTimeBetweenLast2Updates = ClientTimeSinceLastServerUpdate;
 	ClientTimeSinceLastServerUpdate = 0;
 
-	// Get location and rotation from server and store it in the client
-	ClientStartTransform = GetOwner()->GetActorTransform();
+	if (MeshOffsetRoot)
+	{
+		// Get location and rotation from server and store it in the client
+		ClientStartTransform.SetLocation(MeshOffsetRoot->GetComponentLocation());
+		ClientStartTransform.SetRotation(MeshOffsetRoot->GetComponentQuat());
+	}
 	ClientStartVelocity = MovementComponent->Velocity;
+
+	// Only update actor collider on OnRep so that the collider location is "official" and not based on the simulated cubic interpolation
+	GetOwner()->SetActorTransform(ServerState.Transform);
 }
 
 void UGoKartMovementReplicationComp::ClientTick(float DeltaTime)
@@ -143,7 +150,7 @@ void UGoKartMovementReplicationComp::ClientTick(float DeltaTime)
 
 	float LerpRatio = ClientTimeSinceLastServerUpdate / ClientTimeBetweenLast2Updates;
 	FHermiteCubicSpline Spline = CreateSpline();
-	
+
 	InterpolateLocation(LerpRatio, Spline);
 	InterpolateVelocity(LerpRatio, Spline);
 	InterpolateRotation(LerpRatio);
@@ -169,8 +176,9 @@ FHermiteCubicSpline UGoKartMovementReplicationComp::CreateSpline()
 
 void UGoKartMovementReplicationComp::InterpolateLocation(float LerpRatio, const FHermiteCubicSpline& Spline)
 {
+	if (!MeshOffsetRoot) return;
 	FVector NewLocation = Spline.InterpolateLocation(LerpRatio);
-	GetOwner()->SetActorLocation(NewLocation);
+	MeshOffsetRoot->SetWorldLocation(NewLocation);
 }
 
 void UGoKartMovementReplicationComp::InterpolateVelocity(float LerpRatio, const FHermiteCubicSpline& Spline)
@@ -183,6 +191,7 @@ void UGoKartMovementReplicationComp::InterpolateVelocity(float LerpRatio, const 
 
 void UGoKartMovementReplicationComp::InterpolateRotation(float LerpRatio)
 {
+	if (!MeshOffsetRoot) return;
 	FQuat NewRotation = FQuat::Slerp(ClientStartTransform.GetRotation(), ServerState.Transform.GetRotation(), LerpRatio);
-	GetOwner()->SetActorRotation(NewRotation);
+	MeshOffsetRoot->SetWorldRotation(NewRotation);
 }
