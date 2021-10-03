@@ -62,6 +62,8 @@ private:
 	FTransform ClientStartTransform;
 	FVector ClientStartVelocity;
 	
+	float ClientSimulatedTime;
+	
 	/** Used to store the car's transform & velocity in the server and the last move that was simulated on the server */
 	UPROPERTY(ReplicatedUsing=OnRep_ServerState)
 	FGoKartState ServerState;

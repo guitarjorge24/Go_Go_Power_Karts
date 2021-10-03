@@ -13,15 +13,20 @@ struct FGoKartMove
 	GENERATED_BODY()
 
 	UPROPERTY()
-	float Throttle;
+	float Throttle = 0.f;
 	UPROPERTY()
-	float SteeringThrow;
+	float SteeringThrow = 0.f;
 
 	UPROPERTY()
 	float DeltaTime;
 
 	UPROPERTY()
 	float Timestamp;
+
+	bool IsValid() const
+	{
+		return FMath::Abs(Throttle) <= 1 && FMath::Abs(SteeringThrow) <= 1;
+	}
 };
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))

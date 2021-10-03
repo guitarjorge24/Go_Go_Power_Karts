@@ -63,14 +63,26 @@ void UGoKartMovementReplicationComp::UpdateServerState(const FGoKartMove& Move)
 
 bool UGoKartMovementReplicationComp::Server_SendMove_Validate(FGoKartMove Move)
 {
-	// return FMath::Abs(Move) <= 1.f;
-	return true; // #ToDo: Improve 
+	float ProposedTime = ClientSimulatedTime + Move.DeltaTime;
+	bool ClientNotRunningAheadOfServerTime = ProposedTime < GetWorld()->TimeSeconds;
+	if (!ClientNotRunningAheadOfServerTime)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Delta time received from client is too large"));
+		return false;
+	}
+	if(!Move.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("Move received from client is invalid"));
+		return false;
+	}
+	return true;
 }
 
 void UGoKartMovementReplicationComp::Server_SendMove_Implementation(FGoKartMove Move)
 {
 	if (!ensure(MovementComponent)) return;
 
+	ClientSimulatedTime += Move.DeltaTime;
 	MovementComponent->SimulateMove(Move);
 	UpdateServerState(Move);
 }
